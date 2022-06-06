@@ -451,10 +451,11 @@ func (cli *Client) handleFrame(data []byte) {
 	} else if cli.receiveResponse(node) {
 		// handled
 	} else if _, ok := cli.nodeHandlers[node.Tag]; ok {
+		cli.Log.Warnf("#SZ - HandlerQueue: %s", node.Tag)
 		select {
 		case cli.handlerQueue <- node:
 		default:
-			cli.Log.Warnf("Handler queue is full, message ordering is no longer guaranteed")
+			cli.Log.Warnf("Handler queue is full, message ordering is no longer guaranteed: %s", node.Tag)
 			go func() {
 				cli.handlerQueue <- node
 			}()
