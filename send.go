@@ -346,6 +346,8 @@ func (cli *Client) encryptMessageForDevice(plaintext []byte, to types.JID, bundl
 		encType = "pkmsg"
 	}
 
+	cli.Log.Warnf("# SZ - SEND | TO %v MSG - PKMSG: %v", to, encType)
+
 	return &waBinary.Node{
 		Tag: "enc",
 		Attrs: waBinary.Attrs{

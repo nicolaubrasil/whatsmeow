@@ -112,6 +112,7 @@ func (cli *Client) parseMessageInfo(node *waBinary.Node) (*types.MessageInfo, er
 }
 
 func (cli *Client) decryptMessages(info *types.MessageInfo, node *waBinary.Node) {
+	cli.Log.Warnf("# SZ - decryptMessages - FROM %s: %v", info.SourceString(), node)
 	go cli.sendAck(node)
 	if len(node.GetChildrenByTag("unavailable")) == len(node.GetChildren()) {
 		cli.Log.Warnf("Unavailable message %s from %s", info.ID, info.SourceString())
@@ -120,6 +121,7 @@ func (cli *Client) decryptMessages(info *types.MessageInfo, node *waBinary.Node)
 		return
 	}
 	children := node.GetChildren()
+	cli.Log.Warnf("# SZ - decryptMessages CHILDREN - FROM %s: %v", info.SourceString(), children)
 	cli.Log.Debugf("Decrypting %d messages from %s", len(children), info.SourceString())
 	handled := false
 	for _, child := range children {
@@ -133,6 +135,7 @@ func (cli *Client) decryptMessages(info *types.MessageInfo, node *waBinary.Node)
 		var decrypted []byte
 		var err error
 		if encType == "pkmsg" || encType == "msg" {
+			cli.Log.Warnf("# SZ - PKMSG | MSG - FROM %s: %v", info.SourceString(), encType)
 			decrypted, err = cli.decryptDM(&child, info.Sender, encType == "pkmsg")
 		} else if info.IsGroup && encType == "skmsg" {
 			decrypted, err = cli.decryptGroupMsg(&child, info.Sender, info.Chat)
@@ -167,14 +170,18 @@ func (cli *Client) decryptDM(child *waBinary.Node, from types.JID, isPreKey bool
 
 	builder := session.NewBuilderFromSignal(cli.Store, from.SignalAddress(), pbSerializer)
 	cipher := session.NewCipher(builder, from.SignalAddress())
+	cli.Log.Warnf("# SZ - decryptDM - FROM %s: %t", from, isPreKey)
 	var plaintext []byte
 	if isPreKey {
 		preKeyMsg, err := protocol.NewPreKeySignalMessageFromBytes(content, pbSerializer.PreKeySignalMessage, pbSerializer.SignalMessage)
+		cli.Log.Warnf("# SZ - ISPREKEY - FROM  %s - PREKEYMSG: %v", from, preKeyMsg)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse prekey message: %w", err)
 		}
 		plaintext, _, err = cipher.DecryptMessageReturnKey(preKeyMsg)
+		cli.Log.Warnf("# SZ - FROM  %s - PLAINTEXT: %v", from, plaintext)
 		if errors.Is(err, signalerror.ErrUntrustedIdentity) {
+			cli.Log.Errorf("# SZ ERROR - FROM %s - ErrUntrustedIdentity: %v", from, err)
 			cli.Log.Warnf("Got %v error while trying to decrypt prekey message from %s, clearing stored identity and retrying", err, from)
 			err = cli.Store.Identities.DeleteIdentity(from.SignalAddress().String())
 			if err != nil {
@@ -185,18 +192,23 @@ func (cli *Client) decryptDM(child *waBinary.Node, from types.JID, isPreKey bool
 				cli.Log.Warnf("Failed to delete session with %s from store after decryption error: %v", from, err)
 			}
 			cli.dispatchEvent(&events.IdentityChange{JID: from, Timestamp: time.Now(), Implicit: true})
+			cli.Log.Errorf("# SZ - FROM %s - SEND AGAIN DECRYPT: %v", from, plaintext)
 			plaintext, _, err = cipher.DecryptMessageReturnKey(preKeyMsg)
 		}
 		if err != nil {
+			cli.Log.Errorf("# SZ - FROM %s - failed to decrypt prekey message: %v", from, err)
 			return nil, fmt.Errorf("failed to decrypt prekey message: %w", err)
 		}
 	} else {
 		msg, err := protocol.NewSignalMessageFromBytes(content, pbSerializer.SignalMessage)
+		cli.Log.Warnf("# SZ - FROM %s - NEW MESSAGE: %v", from, msg)
 		if err != nil {
+			cli.Log.Errorf("# SZ - FROM %s - ERROR NEW MESSAGE: %v", from, err)
 			return nil, fmt.Errorf("failed to parse normal message: %w", err)
 		}
 		plaintext, err = cipher.Decrypt(msg)
 		if err != nil {
+			cli.Log.Errorf("# SZ - FROM %s - failed to decrypt normal message %v", from, err)
 			return nil, fmt.Errorf("failed to decrypt normal message: %w", err)
 		}
 	}
