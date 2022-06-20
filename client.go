@@ -20,6 +20,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/google/uuid"
 	"go.mau.fi/whatsmeow/appstate"
 	waBinary "go.mau.fi/whatsmeow/binary"
 	waProto "go.mau.fi/whatsmeow/binary/proto"
@@ -385,10 +386,15 @@ func (cli *Client) Logout() error {
 //          // Handle event and access mycli.WAClient
 //     }
 func (cli *Client) AddEventHandler(handler EventHandler) uint32 {
+	uuid := uuid.NewString()
+	cli.Log.Warnf("#SZ - EVENTO CHEGOU %v - TRACEID=%s", handler, uuid)
 	nextID := atomic.AddUint32(&nextHandlerID, 1)
+	cli.Log.Warnf("#SZ - EVENTO CHEGOU - NEXT ID %v - TRACEID=%s", nextID, uuid)
 	cli.eventHandlersLock.Lock()
+	cli.Log.Warnf("#SZ - EVENTO CHEGOU - BEFORE APPEND - TRACEID=%s", uuid)
 	cli.eventHandlers = append(cli.eventHandlers, wrappedEventHandler{handler, nextID})
 	cli.eventHandlersLock.Unlock()
+	cli.Log.Warnf("#SZ - EVENTO CHEGOU - AFTER APPEND - TRACEID=%s", uuid)
 	return nextID
 }
 
@@ -432,12 +438,14 @@ func (cli *Client) RemoveEventHandlers() {
 
 func (cli *Client) handleFrame(data []byte) {
 	decompressed, err := waBinary.Unpack(data)
+	cli.Log.Warnf("#SZ - decompressed: %v, uuid", string(decompressed))
 	if err != nil {
 		cli.Log.Warnf("Failed to decompress frame: %v", err)
 		cli.Log.Debugf("Errored frame hex: %s", hex.EncodeToString(data))
 		return
 	}
 	node, err := waBinary.Unmarshal(decompressed)
+	cli.Log.Warnf("#SZ - Unmarshal: %v, uuid", node)
 	if err != nil {
 		cli.Log.Warnf("Failed to decode node in frame: %v", err)
 		cli.Log.Debugf("Errored frame hex: %s", hex.EncodeToString(decompressed))
