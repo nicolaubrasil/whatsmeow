@@ -438,7 +438,6 @@ func (cli *Client) RemoveEventHandlers() {
 
 func (cli *Client) handleFrame(data []byte) {
 	decompressed, err := waBinary.Unpack(data)
-	cli.Log.Warnf("#SZ - decompressed: %v, uuid", string(decompressed))
 	if err != nil {
 		cli.Log.Warnf("Failed to decompress frame: %v", err)
 		cli.Log.Debugf("Errored frame hex: %s", hex.EncodeToString(data))
