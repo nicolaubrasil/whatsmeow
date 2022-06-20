@@ -29,10 +29,13 @@ func (cli *Client) keepAliveLoop(ctx context.Context) {
 		interval := rand.Int63n(KeepAliveIntervalMax.Milliseconds()-KeepAliveIntervalMin.Milliseconds()) + KeepAliveIntervalMin.Milliseconds()
 		select {
 		case <-time.After(time.Duration(interval) * time.Millisecond):
+			cli.Log.Warnf("#SZ - TIME AFTER INTERVAL")
 			if !cli.sendKeepAlive(ctx) {
+				cli.Log.Warnf("#SZ - KeepAliveLoop nil")
 				return
 			}
 		case <-ctx.Done():
+			cli.Log.Warnf("#SZ - DONE KEEPALIVE LOOP")
 			return
 		}
 	}

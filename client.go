@@ -111,7 +111,7 @@ type Client struct {
 
 // Size of buffer for the channel that all incoming XML nodes go through.
 // In general it shouldn't go past a few buffered messages, but the channel is big to be safe.
-const handlerQueueSize = 2048
+const handlerQueueSize = 4096
 
 // NewClient initializes a new WhatsApp web client.
 //
@@ -232,6 +232,7 @@ func (cli *Client) Connect() error {
 		fs.Close(0)
 		return fmt.Errorf("noise handshake failed: %w", err)
 	}
+	cli.Log.Warnf("#SZ - Initial KeepAlive and HandlerQueue loops:")
 	go cli.keepAliveLoop(cli.socket.Context())
 	go cli.handlerQueueLoop(cli.socket.Context())
 	return nil
@@ -450,8 +451,9 @@ func (cli *Client) handleFrame(data []byte) {
 		// TODO should we do something else?
 	} else if cli.receiveResponse(node) {
 		// handled
+		cli.Log.Warnf("#SZ - ReceiveResponse: %v", node)
 	} else if _, ok := cli.nodeHandlers[node.Tag]; ok {
-		cli.Log.Warnf("#SZ - HandlerQueue: %s", node.Tag)
+		cli.Log.Warnf("#SZ - HandlerQueue: %v", node)
 		select {
 		case cli.handlerQueue <- node:
 		default:
@@ -469,8 +471,10 @@ func (cli *Client) handlerQueueLoop(ctx context.Context) {
 	for {
 		select {
 		case node := <-cli.handlerQueue:
+			cli.Log.Warnf("#SZ - ADD NODE HANDLER QUEUE")
 			cli.nodeHandlers[node.Tag](node)
 		case <-ctx.Done():
+			cli.Log.Warnf("#SZ - HANDLER QUEUE LOOPS IS DONE")
 			return
 		}
 	}
