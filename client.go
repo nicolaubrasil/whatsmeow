@@ -111,7 +111,7 @@ type Client struct {
 
 // Size of buffer for the channel that all incoming XML nodes go through.
 // In general it shouldn't go past a few buffered messages, but the channel is big to be safe.
-const handlerQueueSize = 4096
+const handlerQueueSize = 20480
 
 // NewClient initializes a new WhatsApp web client.
 //
@@ -457,6 +457,7 @@ func (cli *Client) handleFrame(data []byte) {
 		select {
 		case cli.handlerQueue <- node:
 		default:
+			cli.Log.Warnf("#SZ - Handler queue is full - QUANTIDADE %s - CAPACIDADE: %s", len(cli.handlerQueue), (cli.handlerQueue))
 			cli.Log.Warnf("Handler queue is full, message ordering is no longer guaranteed: %s", node.Tag)
 			go func() {
 				cli.handlerQueue <- node
