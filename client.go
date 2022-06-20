@@ -477,9 +477,10 @@ func (cli *Client) handleFrame(data []byte) {
 
 func (cli *Client) handlerQueueLoop(ctx context.Context) {
 	for {
+		cli.Log.Warnf("#SZ - Handler QUEUE SIZE - QUANTIDADE %s - CAPACIDADE: %s", len(cli.handlerQueue), (cli.handlerQueue))
 		select {
 		case node := <-cli.handlerQueue:
-			cli.Log.Warnf("#SZ - ADD NODE HANDLER QUEUE")
+			cli.Log.Warnf("#SZ - ADD NODE HANDLER QUEUE: %v", node)
 			cli.nodeHandlers[node.Tag](node)
 		case <-ctx.Done():
 			cli.Log.Warnf("#SZ - HANDLER QUEUE LOOPS IS DONE")
