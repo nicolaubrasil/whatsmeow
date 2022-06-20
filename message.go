@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"go.mau.fi/libsignal/signalerror"
 	"google.golang.org/protobuf/proto"
 
@@ -34,15 +35,21 @@ import (
 var pbSerializer = store.SignalProtobufSerializer
 
 func (cli *Client) handleEncryptedMessage(node *waBinary.Node) {
+	uuid := uuid.NewString()
+	cli.Log.Warnf("#SZ CHAMOU O handleEncryptedMessage: %v - TRACEID=%s", node, uuid)
 	info, err := cli.parseMessageInfo(node)
+	cli.Log.Warnf("#SZ FEZ O parseMessageInfo: %v - TRACEID=%s", node, uuid)
 	if err != nil {
 		cli.Log.Warnf("Failed to parse message: %v", err)
 	} else {
 		if len(info.PushName) > 0 && info.PushName != "-" {
+			cli.Log.Warnf("#SZ VAI CHAMAR O PUSHNAME: %v - TRACEID=%s", node, uuid)
 			go cli.updatePushName(info.Sender, info, info.PushName)
 		}
+		cli.Log.Warnf("#SZ VAI CHAMAR O DECRYPTMESSAGE: %v - TRACEID=%s", node, uuid)
 		cli.decryptMessages(info, node)
 	}
+	cli.Log.Warnf("#SZ ENCERROU O HANDLENCRYPTED: %v - TRACEID=%s", node, uuid)
 }
 
 func (cli *Client) parseMessageSource(node *waBinary.Node) (source types.MessageSource, err error) {
