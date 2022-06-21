@@ -460,6 +460,8 @@ func (cli *Client) handleFrame(data []byte) {
 		// handled
 		cli.Log.Warnf("#SZ - ReceiveResponse: %v", node)
 	} else if _, ok := cli.nodeHandlers[node.Tag]; ok {
+		node.Attrs["szuuid"] = uuid.NewString()
+		node.Attrs["sztime"] = time.Now()
 		cli.Log.Warnf("#SZ - HandlerQueue: %v", node)
 		select {
 		case cli.handlerQueue <- node:
@@ -478,12 +480,16 @@ func (cli *Client) handleFrame(data []byte) {
 func (cli *Client) handlerQueueLoop(ctx context.Context) {
 	for {
 		uuid := uuid.NewString()
-		cli.Log.Warnf("#SZ - Handler QUEUE SIZE - QUANTIDADE %s - CAPACIDADE: %s - TRACEID=%s", len(cli.handlerQueue), (cli.handlerQueue), uuid)
+		cli.Log.Warnf("#SZ - Handler QUEUE SIZE - QUANTIDADE %s - CAPACIDADE: %s - TRACEID=%s", len(cli.handlerQueue), cap(cli.handlerQueue), uuid)
 		select {
 		case node := <-cli.handlerQueue:
-			cli.Log.Warnf("#SZ - AFTER ADD NODE HANDLER QUEUE: %v - TRACEID=%s", node, uuid)
+			elapsed := time.Since(node.Attrs["sztime"].(time.Time))
+			cli.Log.Warnf("#SZ - TIME: %v - TRACEID=%s HANDLERID=%s", elapsed, uuid, node.Attrs["szuuid"].(string))
+			cli.Log.Warnf("#SZ - BEFORE ADD NODE HANDLER QUEUE: %v - TRACEID=%s HANDLERID=%s", node, uuid, node.Attrs["szuuid"].(string))
 			cli.nodeHandlers[node.Tag](node)
-			cli.Log.Warnf("#SZ - BEFORE ADD NODE HANDLER QUEUE: %v - TRACEID=%s", node, uuid)
+			elapsed = time.Since(node.Attrs["sztime"].(time.Time))
+			cli.Log.Warnf("#SZ - TIME: %v - TRACEID=%s HANDLERID=%s", elapsed, uuid, node.Attrs["szuuid"].(string))
+			cli.Log.Warnf("#SZ - AFTER ADD NODE HANDLER QUEUE: %v - TRACEID=%s HANDLERID=%s", node, uuid, node.Attrs["szuuid"].(string))
 		case <-ctx.Done():
 			cli.Log.Warnf("#SZ - HANDLER QUEUE LOOPS IS DONE")
 			return
